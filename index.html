@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MIDI Streaming Example</title>
+    <style>
+      .container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>MIDI Streaming Example</h1>
+      <button onclick="loadAndPlayMidi('/msrr.mid')">Play MIDI</button>
+      <div id="songLength"></div>
+      <div id="currentTime"></div>
+    </div>
+    <script type="module">
+      // wasm-bindgenで生成されたモジュールをインポート
+      import init, { midi_to_wav } from "./pkg/synth_wasm.js"
+
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)()
+
+      async function loadAndPlayMidi(midiFile) {
+        // WASMモジュールを初期化
+        await init()
+
+        // MIDIファイルを読み込む（例としてFetch APIを使用）
+        const response = await fetch(midiFile)
+        const midiData = await response.arrayBuffer()
+
+        // SF2ファイルを読み込む（例としてFetch APIを使用）
+        const sf2Response = await fetch("/TimGM6mb.sf2")
+        const sf2Data = await sf2Response.arrayBuffer()
+
+        // WAVデータを生成する
+        const wavData = new Uint8Array(
+          midi_to_wav(
+            new Uint8Array(midiData),
+            new Uint8Array(sf2Data),
+            audioContext.sampleRate
+          )
+        )
+
+        // WAVデータをWeb Audio APIで再生する
+        audioContext.decodeAudioData(wavData.buffer, (buffer) => {
+          const source = audioContext.createBufferSource()
+          source.buffer = buffer
+          source.connect(audioContext.destination)
+          source.start()
+
+          // 曲の全体の長さを表示
+          document.getElementById(
+            "songLength"
+          ).innerText = `Total Length: ${buffer.duration.toFixed(2)} seconds`
+
+          // 現在の再生時間を定期的に更新して表示
+          setInterval(() => {
+            document.getElementById(
+              "currentTime"
+            ).innerText = `Current Time: ${audioContext.currentTime.toFixed(
+              2
+            )} seconds`
+          }, 500) // 500ミリ秒ごとに更新
+        })
+      }
+
+      window.loadAndPlayMidi = loadAndPlayMidi
+    </script>
+  </body>
+</html>
