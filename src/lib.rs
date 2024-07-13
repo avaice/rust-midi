@@ -4,7 +4,7 @@ use std::io::Cursor;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn midi_to_wav(midi_data: &[u8], sf2_data: &[u8], sample_rate: u32) -> Vec<u8> {
+pub fn midi_to_wav(midi_data: &[u8], sf2_data: &[u8], sample_rate: u32, vol: f32) -> Vec<u8> {
     // サウンドフォントを読み込む
     let sound_font = std::sync::Arc::new(SoundFont::new(&mut &sf2_data[..]).unwrap());
 
@@ -32,8 +32,8 @@ pub fn midi_to_wav(midi_data: &[u8], sf2_data: &[u8], sample_rate: u32) -> Vec<u
     sequencer.render(&mut left_buf[..], &mut right_buf[..]);
 
     for i in 0..left_buf.len() {
-        samples[i * 2 + 0] = left_buf[i];
-        samples[i * 2 + 1] = right_buf[i];
+        samples[i * 2 + 0] = left_buf[i] * vol;
+        samples[i * 2 + 1] = right_buf[i] * vol;
     }
 
     // WAVデータを作成
